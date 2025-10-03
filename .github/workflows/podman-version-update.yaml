@@ -37,8 +37,11 @@ jobs:
       - name: Compare version numbers using npx semver
         id: compare_version_numbers
         run: |
-          CURRENT_VERSION="${{ steps.get_current_version.outputs.version }}"
-          LATEST_VERSION="${{ steps.fetch_latest_podman_release.outputs.version }}"
+          CURRENT_VERSION="${{ steps.get_current_version.outputs.CURRENT_VERSION }}"
+          LATEST_VERSION="${{ steps.fetch_latest_podman_release.outputs.LATEST_VERSION }}"
+
+          echo "Current version: $CURRENT_VERSION"
+          echo "Latest version: $LATEST_VERSION"
 
           if npx semver "$LATEST_VERSION" -r ">$CURRENT_VERSION"; then
             echo "New version available: $LATEST_VERSION"
@@ -52,12 +55,21 @@ jobs:
         run: |
           REQUIRED_ASSETS=("podman-installer-windows-amd64.exe" "podman-installer-windows-arm64.exe" "podman-installer-macos-amd64.pkg" "podman-installer-macos-arm64.pkg" "podman-installer-macos-universal.pkg")
           MISSING_ASSETS=()
+          echo "Assets found in release:"
+          cat assets.txt
+
           for ASSET in "${REQUIRED_ASSETS[@]}"; do
             if ! grep -q "$ASSET" assets.txt; then
               MISSING_ASSETS+=("$ASSET")
             fi
           done
-          if [ ${#MISSING_ASSETS[@}] -ne 0 ]; then
-            echo "Missing assets: ${MISSING_ASSETS[*]}"
+
+          if [ ${#MISSING_ASSETS[@]} -ne 0 ]; then
+            echo "Error: Missing assets:"
+            for asset in "${MISSING_ASSETS[@]}"; do
+              echo "  - $asset"
+            done
             exit 1
+          else
+            echo "All required assets are present."
           fi
