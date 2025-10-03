@@ -22,36 +22,31 @@ jobs:
         id: fetch_latest_podman_release
         run: |
           LATEST_PODMAN_RELEASE=$(curl -s https://api.github.com/repos/containers/podman/releases/latest)
-          LATEST_VERSION=$(echo "$LATEST_PODMAN_RELEASE" | grep '"tag_name":' | awk -F'"' '{print $4}')
+          LATEST_VERSION=$(echo "$LATEST_PODMAN_RELEASE" | grep '"tag_name":' | sed -E 's/.*"v? ([0-9.]+)".*/\1/')
           ASSETS=$(echo "$LATEST_PODMAN_RELEASE" | grep '"name":' | awk -F '"' '{print $4}' | tr '\n' ' ')
           echo $LATEST_VERSION
           echo $ASSETS
           echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_ENV
           echo "$ASSETS" > assets.txt
 
-      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
-        name: Install pnpm
-        with:
-          run_install: false
-
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
-          cache: 'pnpm'
+          cache: 'npm'
 
       - name: Compare version numbers using semver
         id: compare_varsion_numbers
         run: |
           echo "Current version: $CURRENT_VERSION"
           echo "Latest version: $LATEST_VERSION"
-          pnpm add semver
+          npm install semver
           node -e "
             const semver = require('semver');
             const currentVersion = process.env.CURRENT_VERSION;
             const latestVersion = process.env.LATEST_VERSION;
             if(semver.gt(latestVersion,currentVersion)) {
               console.log('New version available:', latestVersion);
-              console.log('::set-env name=NEW_VERSION::' + latestVersion);
+              console.log('::set-output name=NEW_VERSION::' + latestVersion);
             } else {
               console.log('No new version available.');
               process.exit(0);
