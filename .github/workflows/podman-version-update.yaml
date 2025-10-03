@@ -21,8 +21,7 @@ jobs:
       - name: Fetch latest Podman release
         id: fetch_latest_podman_release
         run: |
-          LATEST_PODMAN_RELEASE=$(curl -s https://api.github.com/repos/containers/podman/releases/latest)
-          LATEST_VERSION=$(echo "$LATEST_PODMAN_RELEASE" | grep '"tag_name":' | sed -E 's/.*"v? ([0-9.]+)".*/\1/')
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/containers/podman/releases/latest | jq -r '.tag_name' | sed 's/^v//')
           ASSETS=$(echo "$LATEST_PODMAN_RELEASE" | grep '"name":' | awk -F '"' '{print $4}' | tr '\n' ' ')
           echo $LATEST_VERSION
           echo $ASSETS
@@ -39,7 +38,7 @@ jobs:
         run: |
           echo "Current version: $CURRENT_VERSION"
           echo "Latest version: $LATEST_VERSION"
-          npm install semver
+          npx semver
           node -e "
             const semver = require('semver');
             const currentVersion = process.env.CURRENT_VERSION;
