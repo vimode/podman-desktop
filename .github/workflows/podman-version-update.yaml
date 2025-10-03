@@ -8,9 +8,8 @@ on:
 jobs:
   update-podman:
     runs-on: ubuntu-24.04
-
     steps:
-      - name: checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Get current podman version
         id: get_current_version
@@ -121,10 +120,9 @@ jobs:
 
       - name: Create PR
         id: create_pr
-
         env:
-          GH_TOKEN: ${{ secrets.PODMAN_DESKTOP_BOT_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.PODMAN_DESKTOP_BOT_TOKEN }}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
@@ -142,8 +140,8 @@ jobs:
 
           echo "Committing the file"
           git commit --signoff -m "chore: Update Podman version to v${bumpedVersion}"
+
           git push origin "${bumpedBranchName}"
-          echo "Preparing pull request body"
           echo -e "Bump Podman version to ${bumpedVersion}\n\nVersion ${bumpedVersion} has been released.\n\nThis PR updates Podman to the latest version." > /tmp/pr-body
 
           echo "Creating pull request"
@@ -156,4 +154,4 @@ jobs:
           echo "Pull request created: $pullRequestUrl"
 
           echo "Adding reviewers"
-          gh pr edit "$pullRequestUrl" --add-reviewer podman-desktop/qe-reviewers
+          # gh pr edit "$pullRequestUrl" --add-reviewer podman-desktop/qe-reviewers
