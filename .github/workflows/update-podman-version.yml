@@ -1,9 +1,10 @@
 name: Update Podman Version
 
 on:
-  schedule:
-    - cron: '0 0 * * *' # Every day at midnight UTC
+  # schedule:
+  #   - cron: '0 0 * * *' # Every day at midnight UTC
   workflow_dispatch:
+  push:
 jobs:
   update-podman:
     runs-on: ubuntu-24.04
@@ -127,7 +128,8 @@ jobs:
           set -euo pipefail
 
           git config --local user.name "${{ github.actor }}"
-          git config --local user.email "fbenoit@redhat.com"
+          # git config --local user.email "fbenoit@redhat.com"
+          git config --local user.email "no-reply@github.com"
 
           bumpedVersion="${{ env.NEW_VERSION }}"
           bumpedBranchName="update-podman-version-${bumpedVersion}"
@@ -154,4 +156,5 @@ jobs:
           echo "Pull request created: $pullRequestUrl"
 
           echo "Adding reviewers"
-          gh pr edit "$pullRequestUrl" --add-reviewer podman-desktop/qe-reviewers
+          gh pr edit "$pullRequestUrl" --add-reviewer vimode
+          # gh pr edit "$pullRequestUrl" --add-reviewer podman-desktop/qe-reviewers
