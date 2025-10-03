@@ -16,7 +16,7 @@ jobs:
         id: get_current_version
         run: |
           CURRENT_VERSION=$(jq -r '.version' extensions/podman/packages/extension/src/podman5.json)
-          echo "CURRENT_VERSION=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
+          echo "CURRENT_VERSION=${CURRENT_VERSION}" >> $GITHUB_ENV
 
       - name: Fetch latest Podman release
         id: fetch_latest_podman_release
@@ -26,7 +26,7 @@ jobs:
           ASSETS=$(echo "$LATEST_PODMAN_RELEASE" | jq -r '.assets[].name' | tr '\n' ' ')
           echo $LATEST_VERSION
           echo $ASSETS
-          echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_OUTPUT
+          echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_ENV
           echo "$ASSETS" > assets.txt
 
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
@@ -37,14 +37,15 @@ jobs:
       - name: Compare version numbers using npx semver
         id: compare_version_numbers
         run: |
-          CURRENT_VERSION="${{ steps.get_current_version.outputs.CURRENT_VERSION }}"
-          LATEST_VERSION="${{ steps.fetch_latest_podman_release.outputs.LATEST_VERSION }}"
+          CURRENT_VERSION="${{ env.CURRENT_VERSION }}"
+          LATEST_VERSION="${{ env.LATEST_VERSION }}"
 
           echo "Current version: $CURRENT_VERSION"
           echo "Latest version: $LATEST_VERSION"
 
           if npx semver "$LATEST_VERSION" -r ">$CURRENT_VERSION"; then
             echo "New version available: $LATEST_VERSION"
+            echo "NEW_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
           else
             echo "No new version available."
             exit 0
@@ -73,3 +74,86 @@ jobs:
           else
             echo "All required assets are present."
           fi
+
+      - name: Update podman5.json
+        run: |
+          set -euo pipefail
+
+          FILE="extensions/podman/packages/extension/src/podman5.json"
+
+          # Validate JSON before modification
+          echo "Validating JSON before modification..."
+          jq empty "$FILE"
+
+          NEW_VERSION="${{ env.NEW_VERSION }}"
+          RELEASE_NOTES_URL="https://github.com/containers/podman/releases/tag/${NEW_VERSION}"
+
+          # Define asset filenames with version
+          MACOS_AMD64="podman-installer-macos-arm64-v${NEW_VERSION}.pkg"
+          MACOS_ARM64="podman-installer-macos-aarch64-v${NEW_VERSION}.pkg"
+          MACOS_UNIVERSAL="podman-installer-macos-universal-v${NEW_VERSION}.pkg"
+          WINDOWS_AMD64="podman-installer-windows-amd64.exe"
+          WINDOWS_ARM64="podman-installer-windows-arm64.exe"
+
+          # Update podman5.json with the new version and update the asset filenames
+          jq --arg new_version "$NEW_VERSION" \
+            --arg release_notes "$RELEASE_NOTES_URL" \
+            --arg macos_amd64 "$MACOS_AMD64" \
+            --arg macos_arm64 "$MACOS_ARM64" \
+            --arg macos_universal "$MACOS_UNIVERSAL" \
+            --arg windows_amd64 "$WINDOWS_AMD64" \
+            --arg windows_arm64 "$WINDOWS_ARM64" \
+            '.version = $new_version |
+             .platform.darwin.version = $new_version |
+             .platform.win32.version = $new_version |
+             .platform.win32.arch.x64.fileName = $windows_amd64 |
+             .platform.win32.arch.arm64.fileName = $windows_arm64 |
+             .platform.darwin.arch.x64.fileName = $macos_amd64 |
+             .platform.darwin.arch.arm64.fileName = $macos_arm64 |
+             .platform.darwin.arch.universal.fileName = $macos_universal' \
+            "$FILE" > tmp.json && mv tmp.json "$FILE"
+
+          # Validate JSON after modification
+          echo "Validating JSON after modification..."
+          jq empty "$FILE"
+
+          echo "Update complete and JSON is valid."
+
+      - name: Create PR
+        id: create_pr
+
+        env:
+          GH_TOKEN: ${{ secrets.PODMAN_DESKTOP_BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PODMAN_DESKTOP_BOT_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          git config --local user.name "${{ github.actor }}"
+          git config --local user.email "fbenoit@redhat.com"
+
+          bumpedVersion="${{ env.NEW_VERSION }}"
+          bumpedBranchName="update-podman-version-${bumpedVersion}"
+          echo "branch name: $bumpedBranchName"
+
+          git checkout -b "$bumpedBranchName"
+
+          echo "Adding the file to the commit"
+          git add extensions/podman/packages/extension/src/podman5.json
+
+          echo "Committing the file"
+          git commit --signoff -m "chore: Update Podman version to v${bumpedVersion}"
+          git push origin "${bumpedBranchName}"
+          echo "Preparing pull request body"
+          echo -e "Bump Podman version to ${bumpedVersion}\n\nVersion ${bumpedVersion} has been released.\n\nThis PR updates Podman to the latest version." > /tmp/pr-body
+
+          echo "Creating pull request"
+          pullRequestUrl=$(gh pr create \
+            --title "chore: Bump Podman version to ${bumpedVersion}" \
+            --body-file /tmp/pr-body \
+            --head "$bumpedBranchName" \
+            --base "main")
+
+          echo "Pull request created: $pullRequestUrl"
+
+          echo "Adding reviewers"
+          gh pr edit "$pullRequestUrl" --add-reviewer podman-desktop/qe-reviewers
