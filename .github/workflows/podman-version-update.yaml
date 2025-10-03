@@ -29,6 +29,16 @@ jobs:
           echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_ENV
           echo "$ASSETS" > assets.txt
 
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
       - name: Compare version numbers using semver
         id: compare_varsion_numbers
         run: |
