@@ -44,16 +44,31 @@ jobs:
         run: |
           echo "Current version: $CURRENT_VERSION"
           echo "Latest version: $LATEST_VERSION"
-          pnpm install semver
+          pnpm add semver
           node -e "
             const semver = require('semver');
             const currentVersion = process.env.CURRENT_VERSION;
             const latestVersion = process.env.LATEST_VERSION;
             if(semver.gt(latestVersion,currentVersion)) {
-            console.log('New version available:', latestVersion);
-          console.log('::set-env name=NEW_VERSION::' + latestVersion);
+              console.log('New version available:', latestVersion);
+              console.log('::set-env name=NEW_VERSION::' + latestVersion);
             } else {
               console.log('No new version available.');
-            process.exit(0);
+              process.exit(0);
             }
           "
+
+      - name: Check for required assets in Podman release
+        id: check_assets
+        run: |
+          REQUIRED_ASSETS=("podman-installer-windows-amd64.exe" "podman-installer-windows-arm64.exe" "podman-installer-macos-amd64.pkg" "podman-installer-macos-arm64.pkg" "podman-installer-macos-universal.pkg")
+          MISSING_ASSETS=()
+          for ASSET in "${REQUIRED_ASSETS[@]}"; do
+            if ! grep -q "$ASSET" assets.txt; then
+              MISSING_ASSETS+=("$ASSET")
+            fi
+          done
+          if [ ${#MISSING_ASSETS[@} -ne 0]; then
+            echo "Missing assets: ${MISSING_ASSETS[*]}"
+            exit 1
+          fi
