@@ -16,46 +16,36 @@ jobs:
         id: get_current_version
         run: |
           CURRENT_VERSION=$(jq -r '.version' extensions/podman/packages/extension/src/podman5.json)
-          echo "CURRENT_VERSION=${CURRENT_VERSION}" >> $GITHUB_ENV
+          echo "CURRENT_VERSION=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Fetch latest Podman release
         id: fetch_latest_podman_release
         run: |
-          LATEST_VERSION=$(curl -s https://api.github.com/repos/containers/podman/releases/latest | jq -r '.tag_name' | sed 's/^v//')
-          ASSETS=$(echo "$LATEST_PODMAN_RELEASE" | grep '"name":' | awk -F '"' '{print $4}' | tr '\n' ' ')
+          LATEST_PODMAN_RELEASE=$(curl -s https://api.github.com/repos/containers/podman/releases/latest)
+          LATEST_VERSION=$(echo "$LATEST_PODMAN_RELEASE" | jq -r '.tag_name' | sed 's/^v//')
+          ASSETS=$(echo "$LATEST_PODMAN_RELEASE" | jq -r '.assets[].name' | tr '\n' ' ')
           echo $LATEST_VERSION
           echo $ASSETS
-          echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_ENV
+          echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_OUTPUT
           echo "$ASSETS" > assets.txt
-
-      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
-        name: Install pnpm
-        with:
-          run_install: false
 
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
-          cache: 'pnpm'
+          cache: 'npm'
 
-      - name: Compare version numbers using semver
-        id: compare_varsion_numbers
+      - name: Compare version numbers using npx semver
+        id: compare_version_numbers
         run: |
-          echo "Current version: $CURRENT_VERSION"
-          echo "Latest version: $LATEST_VERSION"
-          pnpm add -w semver
-          node -e "
-            const semver = require('semver');
-            const currentVersion = process.env.CURRENT_VERSION;
-            const latestVersion = process.env.LATEST_VERSION;
-            if(semver.gt(latestVersion,currentVersion)) {
-              console.log('New version available:', latestVersion);
-              console.log('NEW_VERSION=' + latestVersion + ' >> $GITHUB_OUTPUT');
-            } else {
-              console.log('No new version available.');
-              process.exit(0);
-            }
-          "
+          CURRENT_VERSION="${{ steps.get_current_version.outputs.version }}"
+          LATEST_VERSION="${{ steps.fetch_latest_podman_release.outputs.version }}"
+
+          if npx semver "$LATEST_VERSION" -r ">$CURRENT_VERSION"; then
+            echo "New version available: $LATEST_VERSION"
+          else
+            echo "No new version available."
+            exit 0
+          fi
 
       - name: Check for required assets in Podman release
         id: check_assets
@@ -67,7 +57,7 @@ jobs:
               MISSING_ASSETS+=("$ASSET")
             fi
           done
-          if [ ${#MISSING_ASSETS[@} -ne 0]; then
+          if [ ${#MISSING_ASSETS[@}] -ne 0 ]; then
             echo "Missing assets: ${MISSING_ASSETS[*]}"
             exit 1
           fi
