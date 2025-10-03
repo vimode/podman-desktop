@@ -85,10 +85,10 @@ jobs:
           jq empty "$FILE"
 
           NEW_VERSION="${{ env.NEW_VERSION }}"
-          RELEASE_NOTES_URL="https://github.com/containers/podman/releases/tag/${NEW_VERSION}"
+          RELEASE_NOTES_URL="https://github.com/containers/podman/releases/tag/v${NEW_VERSION}"
 
           # Define asset filenames with version
-          MACOS_AMD64="podman-installer-macos-arm64-v${NEW_VERSION}.pkg"
+          MACOS_AMD64="podman-installer-macos-amd64-v${NEW_VERSION}.pkg"
           MACOS_ARM64="podman-installer-macos-aarch64-v${NEW_VERSION}.pkg"
           MACOS_UNIVERSAL="podman-installer-macos-universal-v${NEW_VERSION}.pkg"
           WINDOWS_AMD64="podman-installer-windows-amd64.exe"
@@ -103,8 +103,9 @@ jobs:
             --arg windows_amd64 "$WINDOWS_AMD64" \
             --arg windows_arm64 "$WINDOWS_ARM64" \
             '.version = $new_version |
-             .platform.darwin.version = $new_version |
-             .platform.win32.version = $new_version |
+             .releaseNotes.href= $release_notes |
+             .platform.darwin.version = ("v" + $new_version) |
+             .platform.win32.version = ("v" + $new_version) |
              .platform.win32.arch.x64.fileName = $windows_amd64 |
              .platform.win32.arch.arm64.fileName = $windows_arm64 |
              .platform.darwin.arch.x64.fileName = $macos_amd64 |
@@ -127,7 +128,8 @@ jobs:
           set -euo pipefail
 
           git config --local user.name "${{ github.actor }}"
-          git config --local user.email "fbenoit@redhat.com"
+          # git config --local user.email "fbenoit@redhat.com"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           bumpedVersion="${{ env.NEW_VERSION }}"
           bumpedBranchName="update-podman-version-${bumpedVersion}"
