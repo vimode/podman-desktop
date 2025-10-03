@@ -22,8 +22,10 @@ jobs:
         id: fetch_latest_podman_release
         run: |
           LATEST_PODMAN_RELEASE=$(curl -s https://api.github.com/repos/containers/podman/releases/latest)
-          LATEST_VERSION=$(echo "$LATEST_PODMAN_RELEASE" | jq -r '.assets[].name')
-          ASSETS=$(echo "$LATEST_PODMAN_RELEASE" | jq -r '.assets[].name')
+          LATEST_VERSION=$(echo "$LATEST_PODMAN_RELEASE" | grep '"tag_name":' | awk -F'"' '{print $4}')
+          ASSETS=$(echo "$LATEST_PODMAN_RELEASE" | grep '"name":' | awk -F '"' '{print $4}' | tr '\n' ' ')
+          echo $LATEST_VERSION
+          echo $ASSETS
           echo "LATEST_VERSION=${LATEST_VERSION} >> $GITHUB_ENV
           echo "$ASSETS" > assets.txt
 
