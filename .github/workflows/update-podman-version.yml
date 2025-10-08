@@ -110,7 +110,7 @@ jobs:
           git config --local user.email "no-reply@github.com"
 
           bumpedVersion="${{ env.NEW_VERSION }}"
-          bumpedBranchName="test-update-podman-version-${bumpedVersion}"
+          bumpedBranchName="second-test-update-podman-version-${bumpedVersion}"
           echo "branch name: $bumpedBranchName"
 
           git checkout -b "$bumpedBranchName"
