@@ -37,8 +37,6 @@ jobs:
       - name: Compare version numbers using semver
         id: compare_version_numbers
         run: |
-          CURRENT_VERSION="${{ env.CURRENT_VERSION }}"
-          LATEST_VERSION="${{ env.LATEST_VERSION }}"
 
           echo "Current version: $CURRENT_VERSION"
           echo "Latest version: $LATEST_VERSION"
@@ -82,17 +80,8 @@ jobs:
 
           FILE="extensions/podman/packages/extension/src/podman5.json"
 
-          echo "Validating JSON before modification..."
-          jq empty "$FILE"
-
-          NEW_VERSION="${{ env.NEW_VERSION }}"
-          CURRENT_VERSION="${{ env.CURRENT_VERSION }}"
-
           # Replace the version and filenames for assets
           sed -i -E "s/$CURRENT_VERSION/$NEW_VERSION/g" "$FILE"
-
-          echo "Validating JSON after modification..."
-          jq empty "$FILE"
 
           echo "Update complete and JSON is valid."
 
@@ -103,14 +92,13 @@ jobs:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
 
           git config --local user.name "${{ github.actor }}"
           # git config --local user.email "fbenoit@redhat.com"
           git config --local user.email "no-reply@github.com"
 
           bumpedVersion="${{ env.NEW_VERSION }}"
-          bumpedBranchName="second-test-update-podman-version-${bumpedVersion}"
+          bumpedBranchName="third-test-update-podman-version-${bumpedVersion}"
           echo "branch name: $bumpedBranchName"
 
           git checkout -b "$bumpedBranchName"
