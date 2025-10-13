@@ -46,12 +46,12 @@ jobs:
             echo "NEW_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
           else
             echo "No new version available."
-            echo "NEW_VERSION=none" >> $GITHUB_OUTPUT
+            echo "newVersion=none" >> $GITHUB_OUTPUT
             exit 0
           fi
 
       - name: Check for required assets in Podman release
-        if: steps.compare_version_numbers.output.NEW_VERSION != 'none'
+        if: steps.compare_version_numbers.outputs.newVersion != 'none'
         id: check_assets
         run: |
           REQUIRED_ASSETS=("podman-installer-windows-amd64.exe" "podman-installer-windows-arm64.exe" "podman-installer-macos-amd64.pkg" "podman-installer-macos-arm64.pkg" "podman-installer-macos-universal.pkg")
@@ -76,7 +76,7 @@ jobs:
           fi
 
       - name: Update podman5.json
-        if: steps.compare_version_numbers.output.NEW_VERSION != 'none'
+        if: steps.compare_version_numbers.outputs.newVersion != 'none'
         run: |
           set -euo pipefail
 
@@ -94,7 +94,7 @@ jobs:
           echo "Update complete and JSON is valid."
 
       - name: Create PR
-        if: steps.compare_version_numbers.output.NEW_VERSION != 'none'
+        if: steps.compare_version_numbers.outputs.newVersion != 'none'
         id: create_pr
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
