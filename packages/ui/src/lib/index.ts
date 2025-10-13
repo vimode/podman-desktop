@@ -29,8 +29,8 @@ import NumberInput from './inputs/NumberInput.svelte';
 import SearchInput from './inputs/SearchInput.svelte';
 import DetailsPage from './layouts/DetailsPage.svelte';
 import FormPage from './layouts/FormPage.svelte';
-import type { LayoutEditItem } from './layouts/LayoutEditor';
-import LayoutManager from './layouts/LayoutEditor.svelte';
+import type { ListOrganizerItem } from './layouts/ListOrganizer';
+import ListOrganizer from './layouts/ListOrganizer.svelte';
 import NavPage from './layouts/NavPage.svelte';
 import Page from './layouts/Page.svelte';
 import Link from './link/Link.svelte';
@@ -44,12 +44,13 @@ import StatusIcon from './statusIcon/StatusIcon.svelte';
 import Tab from './tab/Tab.svelte';
 import TableDurationColumn from './table/DurationColumn.svelte';
 import TableSimpleColumn from './table/SimpleColumn.svelte';
-import { Column as TableColumn, Row as TableRow } from './table/table';
+import { Column as TableColumn, Row as TableRow, type TablePersistence } from './table/table';
 import Table from './table/Table.svelte';
+import { tablePersistence } from './table/table-persistence-store.svelte';
 import Tooltip from './tooltip/Tooltip.svelte';
 import { isFontAwesomeIcon } from './utils/icon-utils';
 
-export type { ButtonType, LayoutEditItem };
+export type { ButtonType, ListOrganizerItem, TablePersistence };
 export {
   Button,
   Carousel,
@@ -64,9 +65,9 @@ export {
   FilteredEmptyScreen,
   FormPage,
   Input,
-  LayoutManager,
   LinearProgress,
   Link,
+  ListOrganizer,
   Modal,
   NavPage,
   NumberInput,
@@ -83,4 +84,4 @@ export {
   TableSimpleColumn,
   Tooltip,
 };
-export { isFontAwesomeIcon };
+export { isFontAwesomeIcon, tablePersistence };
