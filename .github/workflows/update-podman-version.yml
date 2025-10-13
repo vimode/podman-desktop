@@ -46,11 +46,12 @@ jobs:
             echo "NEW_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
           else
             echo "No new version available."
+            echo "NEW_VERSION=none" >> $GITHUB_OUTPUT
             exit 0
           fi
 
       - name: Check for required assets in Podman release
-        if: env.NEW_VERSION != ''
+        if: steps.compare_version_numbers.output.NEW_VERSION != 'none'
         id: check_assets
         run: |
           REQUIRED_ASSETS=("podman-installer-windows-amd64.exe" "podman-installer-windows-arm64.exe" "podman-installer-macos-amd64.pkg" "podman-installer-macos-arm64.pkg" "podman-installer-macos-universal.pkg")
@@ -75,19 +76,25 @@ jobs:
           fi
 
       - name: Update podman5.json
-        if: env.NEW_VERSION != ''
+        if: steps.compare_version_numbers.output.NEW_VERSION != 'none'
         run: |
           set -euo pipefail
 
           FILE="extensions/podman/packages/extension/src/podman5.json"
 
+          echo "Validating JSON before modification..."
+          jq empty "$FILE"
+
           # Replace the version and filenames for assets
           sed -i -E "s/$CURRENT_VERSION/$NEW_VERSION/g" "$FILE"
+
+          echo "Validating JSON after modification..."
+          jq empty "$FILE"
 
           echo "Update complete and JSON is valid."
 
       - name: Create PR
-        if: env.NEW_VERSION != ''
+        if: steps.compare_version_numbers.output.NEW_VERSION != 'none'
         id: create_pr
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -98,8 +105,8 @@ jobs:
           # git config --local user.email "fbenoit@redhat.com"
           git config --local user.email "no-reply@github.com"
 
-          bumpedVersion="${{ env.NEW_VERSION }}"
-          bumpedBranchName="third-test-update-podman-version-${bumpedVersion}"
+          bumpedVersion="${NEW_VERSION}"
+          bumpedBranchName="fourth-test-update-podman-version-${bumpedVersion}"
           echo "branch name: $bumpedBranchName"
 
           git checkout -b "$bumpedBranchName"
